@@ -1,5 +1,5 @@
 # IOcontrol v1.0
-This version supports reading bit values from GPIO pins and changing the state of GPIO pins (ON to OFF). There are 5 available commands. Each of their functions are described below.
+This version supports reading bit values from GPIO pins and changing the state of GPIO pins (ON to OFF) but more functionality will be added in future releases. There are 5 available commands. Each of their functions are described below.
 
 ***
 1. "config n p" : This command configures the gpio number n to either 'in' (input) or 'out' (output) as indicated by p.  
