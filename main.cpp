@@ -1,23 +1,29 @@
 #include "gpio.h"
 #include <iostream>
+#include <string.h>
+#include <string>
 extern "C"
 {
 #include "bcm2835.h"
 }
 using namespace std;
-string com;
-string mode;
-int gpio;
-int gpio_val;
+static char *com = NULL;
+static char *mode = NULL;
+const char *delimeter = " ";
+char input[100];
+const int size = 100;
+static int gpio;
+static int gpio_val;
 void pinout();
 void commands();
+void process_input();
 int main()
 {
-    cout << "IOcontrol for Raspberry Pi. Copyright (c) Vinuda Liyanage 2023\n";
-    cout << "To view a list of available commands and how to use them, type in 'help 0 0' without quotes and press enter.\n";
+    cout << "IOcontrol v1.0.1 for Raspberry Pi. Copyright (c) Vinuda Liyanage 2023\n";
+    cout << "To view a list of available commands and how to use them, type in 'help' without quotes and press enter.\n";
     cout << "NOTE: All commands require the GPIO number of corresponding to the pin number\n";
-    cout << "To view the GPIO numbers for each pin, enter pinout 0 0\n";
-    cout << "To exit this program, enter #exit 0 0\n";
+    cout << "To view the GPIO numbers for each pin, enter pinout.\n";
+    cout << "To exit this program, enter #exit.\n";
     if (!bcm2835_init())
     {
         cout << "Unable to open /dev/mem. Access denied." << endl;
@@ -30,64 +36,108 @@ int main()
         fflush(stdin);
         cout << endl
              << "Enter command > ";
-        cin >> com >> gpio >> mode;
-        cin.clear();
+        cin.getline(input, 100);
         fflush(stdin);
-        if (com == "pinout")
+        process_input();
+        if (com != NULL)
         {
-            pinout();
+            if (strcmp(com, "pinout") == 0)
+            {
+                pinout();
+            }
+            if (strcmp(com, "set") == 0)
+            {
+                if (gpio > 40 || gpio < 0)
+                {
+                    cout << "Error: Invalid GPIO pin\n";
+                    goto a;
+                }
+                if (mode == NULL)
+                {
+                    cout << "Error: Invalid use of 'set' command. Enter -help for command usage info.\n";
+                    goto a;
+                }
+
+                if (strcmp(mode, "read") == 0)
+                {
+                    READ_GPIO(gpio, gpio_val);
+                    cout << gpio_val << endl;
+                }
+                else if (strcmp(mode, "on") == 0 || strcmp(mode, "ON") == 0)
+                {
+                    GPIO_ON(gpio);
+                    cout << "GPIO " << gpio << " has been pulled to HIGH\n";
+                }
+                else if (strcmp(mode, "off") == 0 || strcmp(mode, "ON") == 0)
+                {
+                    GPIO_OFF(gpio);
+                    cout << "GPIO " << gpio << " has been pulled to LOW\n";
+                }
+                else
+                {
+                    cout << "Error: Invalid use of 'set' command. Enter -help for command usage info.\n";
+                }
+            }
+
+            if (strcmp(com, "config") == 0)
+            {
+                if (mode == NULL)
+                {
+                    cout << "Error: Invalid use of 'config' command. Enter -help for command usage info.\n";
+                    goto a;
+                }
+
+                if (gpio > 40 || gpio < 0)
+                {
+                    cout << "Error: Invalid GPIO pin\n";
+                    goto a;
+                }
+                if (strcmp(mode, "in") == 0 || strcmp(mode, "out") == 0)
+                {
+                    GPIO_FUNC(gpio, mode);
+                    cout << "GPIO " << gpio << " has been configured for " << mode << "put\n";
+                }
+                else
+                {
+                    cout << "Error: Invalid use of 'config' command. Enter -help for command usage info.\n";
+                }
+            }
+
+            if (strcmp(com, "#exit") == 0)
+            {
+                bcm2835_close();
+                exit(0);
+            }
+            if (strcmp(com, "help") == 0)
+            {
+                commands();
+            }
         }
-        if (com == "set")
+    }
+}
+void process_input()
+{
+    char *gpio_str;
+    com = strtok(input, delimeter);
+    if (com != NULL)
+    {
+        if (strcmp(com, "config") == 0 || strcmp(com, "set") == 0)
         {
-            if (gpio > 40 || gpio < 0)
+            gpio_str = strtok(0, delimeter);
+            if (gpio_str != NULL)
             {
-                cout << "Error: Invalid GPIO pin\n";
-                goto a;
+                gpio = strtol(gpio_str, NULL, 10);
             }
-            if (mode == "read")
+            mode = strtok(0, delimeter);
+            if (mode == NULL)
             {
-                READ_GPIO(gpio, gpio_val);
-                cout << gpio_val << endl;
-            }
-            else if (mode == "on" || mode == "ON")
-            {
-                GPIO_ON(gpio);
-                cout << "GPIO " << gpio << " has been pulled to HIGH\n";
-            }
-            else if (mode == "off" || mode == "OFF")
-            {
-                GPIO_OFF(gpio);
-                cout << "GPIO " << gpio << " has been pulled to LOW\n";
-            }
-            else
-            {
-                cout << "Error: Invalid use of 'set' command. Enter -help for command usage info.\n";
+                puts("Error: Invalid input!");
             }
         }
-        if (com == "config")
-        {
-            if (gpio > 40 || gpio < 0)
-            {
-                cout << "Error: Invalid GPIO pin\n";
-                goto a;
-            }
-            if (mode == "in" || mode == "out")
-            {
-                GPIO_FUNC(gpio, mode);
-            }
-            else
-            {
-                cout << "Error: Invalid use of 'config' command. Enter -help for command usage info.\n";
-            }
-        }
-        if (com == "#exit")
-        {
-            bcm2835_close();
-            exit(0);
-        }
-        if(com == "help"){
-            commands();
-        }
+    }
+    else
+    {
+        puts("Error: Invalid input!");
     }
 }
 void pinout()
@@ -134,10 +184,11 @@ void pinout()
     cout << "39: Ground\n";
     cout << "40: GPIO 21 (PCM_DOUT)\n";
 }
-void commands(){
-cout << "\n1. config n p : This command configures the gpio number n to either 'in' (input) or 'out' (output) as indicated by p.\n";
-cout << "2. set n p : This command sets the gpio n to either 'read' (read gpio), 'on' (turn gpio on) or 'off' (turn gpio off) as indicated by p.\n";
-cout << "3. #exit n n : This command exits the program; n can be any value.\n";
-cout << "4. pinout : This command shows a list of pins and their corresponding GPIO numbers.\n";
-cout << "5. help n n : This command shows a list of available commands and their usage. n can be any value.\n";
+void commands()
+{
+    cout << "\n1. config n p : This command configures the gpio number n to either 'in' (input) or 'out' (output) as indicated by p.\n";
+    cout << "2. set n p : This command sets the gpio n to either 'read' (read gpio), 'on' (turn gpio on) or 'off' (turn gpio off) as indicated by p.\n";
+    cout << "3. #exit : This command exits the program.\n";
+    cout << "4. pinout : This command shows a list of pins and their corresponding GPIO numbers.\n";
+    cout << "5. help : This command shows a list of available commands and their usage.\n";
 }
