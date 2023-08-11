@@ -1,4 +1,4 @@
-# IOcontrol v1.0
+# Rpi-gpio v1.0
 This version supports reading bit values from GPIO pins and changing the state of GPIO pins (ON to OFF); but more functionality will be added in future releases. There are 5 available commands. Each of their functions are described below.
 
 ***
