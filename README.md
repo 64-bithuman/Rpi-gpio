@@ -1,4 +1,4 @@
-# IOcontrol
+# Rpi-gpio
 A program that makes interfacing with the Raspberry Pi GPIO easier.
 By using a few simple commands, you can now control and read
 the gpio pins of your Raspberry Pi directly without having the need to write any code.
